@@ -1,0 +1,40 @@
+# Wordpress Files #
+wp-config.php
+wp-content/advanced-cache.php
+wp-content/backup-db/
+wp-content/backups/
+wp-content/blogs.dir/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/uploads/
+wp-content/wp-cache-config.php
+wp-content/plugins/hello.php
+
+
+# Misc
+.DS_Store
+.svn
+.cvs
+*.bak 
+*.swp
+Thumbs.db 
+*.log
+/.htaccess
+/license.txt
+/readme.html
+/sitemap.xml
+/sitemap.xml.gz
+# *.sql #
+*.sqlite
+database.yml
+secrets.yml
+/vendor
+
+# Codeception
+/tests/_output
+phpbuiltinserver.access_log.txt
+phpbuiltinserver.errors.txt
+phpbuiltinserver.output.txt
+
+# Ansible
+*.retry
