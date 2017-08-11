@@ -1,0 +1,6 @@
+
+# The URL you use to develop stuff at
+development_url: localhost:80
+
+# The URL the test suite will use (must be different than above)
+test_url: localhost:9998

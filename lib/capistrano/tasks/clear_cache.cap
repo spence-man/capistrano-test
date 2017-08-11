@@ -1,0 +1,12 @@
+include Helpers
+
+desc "Clears the cache"
+
+task :clear_cache do
+  on roles(:app) do
+    within release_path do
+      # Trigger nginx-helper to purge cache
+      execute :wp, "nginx-helper purge-all"
+    end
+  end
+end

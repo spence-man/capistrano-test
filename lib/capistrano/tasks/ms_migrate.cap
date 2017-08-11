@@ -1,0 +1,118 @@
+
+##########################################
+#
+# This is a one-time use file for migrating the structure of WP uploads to remove dependancy on ms-files.php
+#
+##########################################
+
+# include Helpers
+
+# namespace :ms_migrate do
+
+#   # The IDs for all our blogs
+#   site_ids = [2,7,9,10,11,12,14,15,16,17,18,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,36]
+
+#   desc "Run a FULL migration which will result in the local stage containing a completed migration"
+#   task :full do
+
+#     print_warning("ms_migrate:full will:
+#   1. Copy uploads from the OLD production path to the current production deployment
+#   2. Download all uploads to your local machine
+#   3. Download the database to your local machine
+#   4. Perform a bunch of replacements on the database on your local machine
+
+#   ---
+#   Then, after completion, you should perform the following manually:
+#   1. run cap staging clone
+#   2. Upload your modified database to staging
+#   3. Verify that staging looks okay
+#   4. Run DB migrations on production AND switch to deployment simultaneously
+#   ")
+
+#     if confirm("Do you want to ms_migrate_full to your local machine?")
+#       invoke "ms_migrate:copy_production_uploads"
+#       invoke "uploads:pull"
+#       invoke "db:pull"
+#       invoke "ms_migrate:migrate_local_database"
+#     end
+
+#   end
+
+#   desc "Copy LIVE production files to the PRODUCTION deployment"
+#   task :copy_production_uploads do
+
+#     on roles(:web) do |server|
+
+#       if confirm("About to copy uploads from old production dir to current deployment. Continue?")
+#         # Erase destination
+#         puts "Erasing the current files in destination folder..."
+#         puts "rm -rf #{shared_path}/content/uploads/*"
+#         execute "rm -rf #{shared_path}/content/uploads/*"
+#         execute "mkdir #{shared_path}/content/uploads/sites"
+
+#         # Copy /uploads
+#         puts "Now copying uploads for primary site"
+#         execute :rsync, "-avzO /home/chapmanblogs/blogs.chapman.edu/wp-content/uploads/ #{shared_path}/content/uploads/"
+
+#         # Copy /blogs.dir
+#         site_ids.each do |id|
+#           puts "Now copying uploads for site #{id}"
+#           execute "mkdir #{shared_path}/content/uploads/sites/#{id}/"
+#           execute :rsync, "-avzO /home/chapmanblogs/blogs.chapman.edu/wp-content/blogs.dir/#{id}/files/ #{shared_path}/content/uploads/sites/#{id}/"
+#         end
+#       end
+
+#     end
+
+#   end
+
+#   desc "Migrate the local database"
+#   task :migrate_local_database do
+#     run_locally do
+#       perform_migrations(fetch(:local_domain), site_ids)
+#     end
+#   end
+
+#   desc "Migrate the remote database"
+#   task :migrate_remote_database do
+#     on roles(:db) do 
+#       within release_path do
+#         perform_migrations(fetch(:stage_domain), site_ids)
+#       end
+#     end
+#   end
+
+#   def perform_migrations(domain, site_ids)
+#     if confirm("About to modify/migrate the database for #{domain}. Continue?")
+
+#       # Update site options table
+#       execute :wp, "db query \"UPDATE wp_options SET option_value='' WHERE option_name='upload_path'\""
+#       execute :wp, "db query \"UPDATE wp_options SET option_value='' WHERE option_name='upload_url_path'\""
+#       execute :wp, "db query \"UPDATE wp_options SET option_value='' WHERE option_name='fileupload_url'\""
+
+#       site_ids.each do |id|
+#         execute :wp, "db query \"UPDATE wp_#{id}_options SET option_value='' WHERE option_name='upload_path'\""
+#         execute :wp, "db query \"UPDATE wp_#{id}_options SET option_value='' WHERE option_name='upload_url_path'\""
+#         execute :wp, "db query \"UPDATE wp_#{id}_options SET option_value='' WHERE option_name='fileupload_url'\""
+#       end
+
+#       # Set ms_files_rewriting false
+#       # IMPORTANT: This should only insert one time! 
+#       execute :wp, "db query \"INSERT INTO wp_sitemeta (site_id, meta_key, meta_value) VALUES ('1', 'ms_files_rewriting', '0') \""
+
+#       # Replace all URLs to images!!!
+#       site_ids.each do |id|
+#         site_url = capture(:wp, "site url #{id}").sub(/^https?\:\/\//, '') # Omit https?:// here
+#         home_url = capture(:wp, "site url 1").sub(/^https?\:\/\//, '') # Omit https?:// here
+
+#         old_url = "#{site_url}/files/"
+#         new_url = "#{home_url}/wp-content/uploads/sites/#{id}/"
+
+#         execute :wp, "search-replace --network --recurse-objects --url=#{domain} --skip-columns=guid #{old_url} #{new_url}"
+
+#       end
+
+#     end
+#   end
+
+# end

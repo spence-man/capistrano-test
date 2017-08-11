@@ -1,0 +1,31 @@
+namespace :uploads do
+  include Helpers
+
+  # desc "Push any changed or new files from local to remote"
+  # task :push do
+  #   run_locally do
+
+  #     print_warning("You probably shouldn't be using this to upload assets to a remote server unless you are also uploading a matching database! WordPress tracks all assets in the database!")
+  #     if confirm("Proceed with asset upload to #{fetch(:stage_domain)}?")
+  #       roles(:web).each do |role|
+  #         delete_flag = confirm('Delete stray files from destination server if not present locally?') ? '--delete' : ''
+  #         execute :rsync, "-avzO #{delete_flag} content/uploads/ #{role.user}@#{role.hostname}:#{shared_path}/content/uploads"
+  #       end
+  #     end
+
+  #   end
+  # end
+
+  desc "Pull any changed or new files from remote to local"
+  task :pull do
+    run_locally do
+      roles(:web).each do |role|
+        delete_flag = confirm('Delete local files not present on remote server?') ? '--delete' : ''
+        execute :rsync, "-avzO #{delete_flag} #{role.user}@#{role.hostname}:#{shared_path}/content/uploads/ content/uploads"
+      end
+
+      print_success("All assets downloaded from #{fetch(:stage_domain)} - you should also pull the database if you haven't done so already.")
+    end
+  end
+
+end

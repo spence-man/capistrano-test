@@ -1,0 +1,100 @@
+include Helpers
+
+desc "Clones upstream data to the remote target"
+task :clone do
+
+  if fetch(:stage) == :production
+    print_warning("You cant run this task on production!")
+    next
+  end
+
+  # Production server for cloning
+  server "blogv-mkt-wb01.chapman.edu", user: "chapmanblogs", roles: %w{upstream}
+  set :upstream_domain, "blogs.chapman.edu"
+  set :upstream_deploy_to, "/home/chapmanblogs"
+  set :stage_deploy_to, fetch(:deploy_to)
+
+  # Warn the user of what they are about to do!
+  print_warning("Cloning will:
+1. Delete the database on #{fetch(:stage_domain)} and replace it with production data
+2. Delete user uploads on #{fetch(:stage_domain)} which do not exist on production
+3. Update the database and uploads on #{fetch(:stage_domain)} to match production")
+
+  if confirm("Do you want to proceed with cloning?")
+
+    # Step 1a: Download upstream database
+    on roles(:upstream) do |upstream|
+      set :deploy_to, fetch(:upstream_deploy_to)
+
+      # Set file names
+      execute :mkdir, "-p #{shared_path}/db_backups"
+      set :backup_filename, 'production__'+backup_timestamp
+      set :backup_file, "#{shared_path}/db_backups/#{fetch(:backup_filename)}.sql"
+
+      # Generate backup
+      within release_path do   
+        execute :wp, "db export #{fetch(:backup_file)} --add-drop-table"
+      end
+
+      # Download backup
+      system('mkdir -p db_backups')
+      download! "#{fetch(:backup_file)}", "db_backups/#{fetch(:backup_filename)}.sql"
+
+      # Remove file
+      within release_path do   
+        execute :rm, "#{fetch(:backup_file)}"
+      end
+
+    end # end upstream
+
+    # Step 1b: Upload database to target
+    on roles(:web) do |dest|
+      set :deploy_to, fetch(:stage_deploy_to)
+
+      # Set file names
+      execute :mkdir, "-p #{shared_path}/db_backups"
+      set :backup_file, "#{shared_path}/db_backups/#{fetch(:backup_filename)}.sql"
+
+      # Upload file
+      upload! "db_backups/#{fetch(:backup_filename)}.sql", "#{fetch(:backup_file)}"
+
+      within release_path do
+
+        # Import DB
+        execute :wp, "db import #{fetch(:backup_file)}"
+
+        # Remove file
+        execute :rm, "#{fetch(:backup_file)}"
+
+        # Apparently we need to pause after importing and before search-replacing
+        sleep 2
+
+        # Search-Replace
+        execute :wp, "search-replace --network --recurse-objects --url=#{fetch(:upstream_domain)} --skip-columns=guid #{fetch(:upstream_domain)} #{fetch(:stage_domain)}"
+
+      end
+
+    end #end target
+
+    # Step 2: Clone upload files
+    on roles(:web) do |dest|
+      on roles(:upstream) do |upstream|
+        run_locally do
+
+          # Configure paths on both servers
+          set :deploy_to, fetch(:upstream_deploy_to)
+          upstream_shared_path = "#{shared_path}"
+
+          set :deploy_to, fetch(:stage_deploy_to)
+          dest_shared_path = "#{shared_path}"
+
+          ## SSH into upstream server and rsync to destination server; use -A to pass through credentials
+          execute "ssh -A #{upstream.user}@#{upstream.hostname} rsync -avzO --delete #{upstream_shared_path}/content/uploads/ #{dest.user}@#{dest.hostname}:#{dest_shared_path}/content/uploads/"
+
+        end
+      end
+    end
+
+  end # end confirm
+
+end

@@ -1,0 +1,31 @@
+include Helpers
+require 'json'
+
+namespace :migrate do
+
+  desc "Change the size of the RSS feeds on all sites"
+  task :change_rss_feed_size do
+    on roles(:web) do |server|
+      within release_path do
+
+        sites = JSON.parse(capture(:wp, "site list --fields=blog_id,deleted --format=json"))
+        sites.each do |site|
+
+          # Skip sites which are deleted
+          next if (site['deleted'] == '1')
+
+          # Get the site URL
+          site_url = capture(:wp, "site url #{site['blog_id']}")
+
+          # Update the RSS option
+          execute :wp, "option update posts_per_rss 30 --url=#{site_url}"
+
+          info "Updating options for #{site_url}"
+
+        end
+
+      end
+    end
+  end
+
+end

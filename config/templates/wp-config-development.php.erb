@@ -1,0 +1,110 @@
+<?php
+
+######### IMPORTANT #########
+#
+# This version of the file is used only in development/testing. 
+#
+# Make sure to change '/config/templates/wp-config.php.erb' for staging/production
+#
+#############################
+
+
+#############################
+# Environment
+#############################
+if ( !defined('WP_ENV') ) define('WP_ENV', 'development');
+
+if (WP_ENV == 'phpunit' || WP_ENV == 'test') {
+	define('WP_DEBUG', false); // Debug mode must always be disabled for testing
+} else {
+	define('WP_DEBUG', <%= (wp_debug) ? 'true' : 'false' %>);
+}
+
+# For use during site maintenance (see plugins/cu-wp-customization)
+define('SMC_MAINTENANCE_BLOCK_DASHBOARD', false); # Blocks Dashboard access except network-admins
+define('SMC_MAINTENANCE_BLOCK_ALL', false);       # Blocks ALL site traffic except network-admins
+
+
+#############################
+# Database Configuration
+#############################
+$table_prefix  = 'wp_';
+
+if (WP_ENV == 'phpunit' || WP_ENV == 'test') {
+
+	define('DB_NAME', '<%= database_test['database'] %>');
+	define('DB_USER', '<%= database_test['username'] %>');
+	define('DB_PASSWORD', '<%= database_test['password'] %>');
+	define('DB_HOST', '<%= database_test['host'] %>');
+	define('DB_CHARSET', 'utf8');
+	define('DB_COLLATE', '');
+
+} else {
+
+	define('DB_NAME', '<%= database['database'] %>');
+	define('DB_USER', '<%= database['username'] %>');
+	define('DB_PASSWORD', '<%= database['password'] %>');
+	define('DB_HOST', '<%= database['host'] %>');
+	define('DB_CHARSET', 'utf8');
+	define('DB_COLLATE', '');
+
+}
+
+
+#############################
+# Automated Testing
+#############################
+if (WP_ENV == 'phpunit') {
+	define( 'WP_TESTS_DOMAIN', '<%= wp_domain_test %>' );
+	define( 'WP_TESTS_EMAIL', 'chappress@gmail.com' );
+	define( 'WP_TESTS_TITLE', 'Chappress TEST' );
+	define( 'WP_PHP_BINARY', 'php' );
+}
+
+#############################
+# Localization Settings
+#############################
+define('WPLANG', '');
+
+
+#############################
+# Security
+#############################
+define('DISALLOW_FILE_EDIT', true); // File edits must only occur via SCM (git)
+define('DISALLOW_FILE_MODS', true); // File edits must only occur via SCM (git)
+
+
+#############################
+# Security Keys (Salt)
+#############################
+require('<%= project_path %>/wp-security-keys.php');
+
+
+#############################
+# PATHS AND URLS
+#############################
+define('WP_HOME','http://'.DOMAIN_CURRENT_SITE);
+define('WP_SITEURL','http://'.DOMAIN_CURRENT_SITE);
+
+// wp-content paths
+define('WP_CONTENT_URL', 'http://'.DOMAIN_CURRENT_SITE.'/wp-content');
+define('WP_CONTENT_DIR', realpath('<%= project_path %>/content'));
+
+// mu-plugins paths (https://codex.wordpress.org/Must_Use_Plugins)
+define('WPMU_PLUGIN_URL', 'http://'.DOMAIN_CURRENT_SITE.'/wp-content/global');
+define('WPMU_PLUGIN_DIR', realpath('<%= project_path %>/content/global'));
+
+// Nginx cache path for nginx-helper
+define('RT_WP_NGINX_HELPER_CACHE_PATH', '/var/cache/nginx/wordpress/');
+
+// Absolute path to the WP directory
+if ( !defined('ABSPATH') ) define('ABSPATH', '<%= project_path %>/public/');
+
+
+#############################
+# Includes
+#############################
+if (WP_ENV != 'phpunit') {
+	require_once(ABSPATH . 'wp-settings.php');
+}
+

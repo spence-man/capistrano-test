@@ -1,0 +1,98 @@
+namespace :db do
+  include Helpers
+
+  desc "Creates a sensible backup name for SQL files"
+  task :backup_name do
+    on roles(:web) do
+      execute :mkdir, "-p #{shared_path}/db_backups"
+      set :backup_filename, backup_timestamp
+      set :backup_file, "#{shared_path}/db_backups/#{fetch(:backup_filename)}.sql"
+    end
+  end
+
+  desc "Takes a database dump from remote server"
+  task :backup do
+   invoke 'db:backup_name'
+    on roles(:db) do    
+      
+      within release_path do   
+        execute :wp, "db export #{fetch(:backup_file)} --add-drop-table"
+      end
+
+      system('mkdir -p db_backups')
+      download! "#{fetch(:backup_file)}", "db_backups/#{fetch(:stage)}__#{fetch(:backup_filename)}.sql"
+
+      within release_path do   
+        execute :rm, "#{fetch(:backup_file)}"
+      end
+
+    end
+  end
+
+  desc "Imports the remote database into your local environment"
+  task :pull do
+    invoke 'db:backup'
+    
+    on roles(:db) do  
+      
+      run_locally do
+
+        # Import DB
+        execute :wp, "db import db_backups/#{fetch(:stage)}__#{fetch(:backup_filename)}.sql"
+
+        # Replace domain name
+        sleep 2
+        execute :wp, "search-replace --network --recurse-objects --url=#{fetch(:stage_domain)} --skip-columns=guid #{fetch(:stage_domain)} #{fetch(:local_domain)}"
+
+        # Replace protocol
+        sleep 2
+        execute :wp, "search-replace --network --recurse-objects --url=#{fetch(:local_domain)} --skip-columns=guid https://#{fetch(:local_domain)} http://#{fetch(:local_domain)}"
+
+      end
+
+    end
+
+  end
+
+  # desc "Imports the local database into your remote environment"
+  # task :push do
+
+  #   # Prompt user to download backup first
+  #   if confirm('Do you want to download a backup of the old DB first? (You really should)')
+  #     invoke 'db:backup'
+  #   end
+
+  #   # Proceed with upload of local db
+  #   invoke 'db:backup_name'
+  #   on roles(:db) do
+
+  #     print_warning("This is going to wipe out the database on #{fetch(:stage_domain)}")
+
+  #     if confirm('Proceed with uploading your local database?')
+
+  #       run_locally do
+  #         execute :mkdir, "-p db_backups"
+  #         execute :wp, "db export db_backups/#{fetch(:backup_filename)}.sql --add-drop-table"
+  #       end
+
+  #       upload! "db_backups/#{fetch(:backup_filename)}.sql", "#{fetch(:backup_file)}"
+
+  #       within release_path do
+  #         execute :wp, "db import #{fetch(:backup_file)}"
+  #         execute :wp, "search-replace --network --recurse-objects --url=#{fetch(:local_domain)} --skip-columns=guid #{fetch(:local_domain)} #{fetch(:stage_domain)}"
+  #         execute :rm, "#{fetch(:backup_file)}"
+  #       end
+
+  #       run_locally do
+  #         execute :rm, "db_backups/#{fetch(:backup_filename)}.sql"
+  #         if Dir['db_backups/*'].empty?
+  #           execute :rmdir, "db_backups"
+  #         end
+  #       end
+
+  #     end # end confirm
+      
+  #   end
+  # end
+
+end

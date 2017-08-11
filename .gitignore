@@ -38,3 +38,30 @@ phpbuiltinserver.output.txt
 
 # Ansible
 *.retry
+
+config/secrets.yml
+
+php_error_log.txt
+.ruby-version
+
+*.bak
+
+.htaccess
+xmlrpc.php
+sitemap.xml
+sitemap.xml.gz
+readme.html
+license.txt
+content/uploads/*
+content/upgrade/*
+content/cache/*
+content/backup/*
+content/blogs.dir/*
+wp-config.php
+wp-config-sample.php
+wp-security-keys.php
+
+*.sql
+*.sqlite
+database.yml
+secrets.yml
